@@ -53,7 +53,6 @@ jobs:
         run: |
           ls dist
 
-      - name: Push
       - name: Load docker images
         run: |
           for image in dist/*.tar; do
