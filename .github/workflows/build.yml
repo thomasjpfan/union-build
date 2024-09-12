@@ -52,3 +52,10 @@ jobs:
       - name: Check images
         run: |
           ls dist
+
+      - name: Push
+      - name: Load docker images
+        run: |
+          for image in dist/*.tar; do
+            docker image load -i dist/union-*.tar
+          done
