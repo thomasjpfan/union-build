@@ -56,5 +56,5 @@ jobs:
       - name: Load docker images
         run: |
           for image in dist/*.tar; do
-            docker image load -i dist/union-*.tar
+            docker image load -i "$image"
           done
