@@ -25,8 +25,8 @@ jobs:
           cache-to: type=gha,mode=max
           file: Dockerfile
           platforms: linux/amd64
-          tags: union:py-${{ matrix.python-version }}-${{ matrix.union-version }}
-          outputs: type=docker,dest=dist/union-py-${{ matrix.python-version }}-${{ matrix.union-version }}.tar
+          tags: union:py${{ matrix.python-version }}-${{ matrix.union-version }}
+          outputs: type=docker,dest=dist/py${{ matrix.python-version }}-${{ matrix.union-version }}.tar
           build-args: |
             PYTHON_VERSION=${{ matrix.python-version }}
             UNION_VERSION=${{ matrix.union-version }}
@@ -34,7 +34,7 @@ jobs:
       - name: Upload single binary image
         uses: actions/upload-artifact@v4
         with:
-          name: union-${{ matrix.python-version }}-${{ matrix.union-version }}
+          name: py${{ matrix.python-version }}-${{ matrix.union-version }}
           path: dist
 
   build_download_images:
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: union-*
+          pattern: py*
           merge-multiple: true
 
       - name: Check images
