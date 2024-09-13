@@ -16,7 +16,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Create destination for image tarballs
         run: |
-          mkdir -p dist
+          mkdir -p images
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
