@@ -37,8 +37,8 @@ jobs:
           name: py${{ matrix.python-version }}-${{ matrix.union-version }}
           path: images
 
-  build_download_images:
-    name: Download images
+  upload_images:
+    name: Upload images
     runs-on: ubuntu-latest
     needs: [build_images]
     permissions:
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: images
-          pattern: py${{ matrix.python-version }}
+          pattern: py${{ matrix.python-version }}*
 
       - name: Check images
         run: |
