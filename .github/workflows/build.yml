@@ -53,6 +53,7 @@ jobs:
         with:
           path: images
           pattern: py${{ matrix.python-version }}*
+          merge-multiple: true
 
       - name: Check images
         run: |
