@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.12"]
         union-version: ["0.1.75"]
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64
           tags: union:py${{ matrix.python-version }}-${{ matrix.union-version }}
-          outputs: type=docker,dest=dist/py${{ matrix.python-version }}-${{ matrix.union-version }}.tar
+          outputs: type=docker,dest=images/py${{ matrix.python-version }}-${{ matrix.union-version }}.tar
           build-args: |
             PYTHON_VERSION=${{ matrix.python-version }}
             UNION_VERSION=${{ matrix.union-version }}
@@ -35,7 +35,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: py${{ matrix.python-version }}-${{ matrix.union-version }}
-          path: dist
+          path: images
 
   build_download_images:
     name: Download images
@@ -44,13 +44,15 @@ jobs:
     permissions:
       packages: write
       contents: read
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          path: dist
-          pattern: py*
-          merge-multiple: true
+          path: images
+          pattern: py${{ matrix.python-version }}
 
       - name: Check images
         run: |
