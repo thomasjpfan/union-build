@@ -56,7 +56,7 @@ jobs:
 
       - name: Check images
         run: |
-          ls dist
+          ls images
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
