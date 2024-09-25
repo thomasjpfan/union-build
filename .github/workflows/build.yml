@@ -6,7 +6,6 @@ jobs:
   build_images:
     name: Build images
     runs-on: ubuntu-latest
-    needs: define-python-versions
     strategy:
       matrix:
         python-version: ["3.12"]
