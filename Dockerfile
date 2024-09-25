@@ -19,7 +19,7 @@ ARG UNION_VERSION
 RUN --mount=type=cache,sharing=locked,mode=0777,target=/root/.cache/uv,id=uv \
     --mount=from=uv,source=/uv,target=/usr/bin/uv \
     python -m venv $VIRTUAL_ENV && \
-    uv pip install --python $VIRTUAL_ENV union
+    uv pip install --python $VIRTUAL_ENV union==${UNION_VERSION}
 
 USER flytekit
 

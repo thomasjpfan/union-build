@@ -3,90 +3,91 @@ name: Build images
 on: [push]
 
 jobs:
-  define-python-versions:
-    runs-on: ubuntu-latest
-
-    outputs:
-      versions: ${{ steps.python_versions.outputs.versions }}
-
-    steps:
-      - name: Define Python versions
-        id: python_versions
-        run: |
-          echo 'versions=["3.8", "3.9", "3.10", "3.11", "3.12"]' >> "$GITHUB_OUTPUT"
-
   build_images:
     name: Build images
     runs-on: ubuntu-latest
     needs: define-python-versions
     strategy:
       matrix:
-        python-version:  ${{ fromJSON(needs.define-python-versions.outputs.versions) }}
-        union-version: ["0.1.75"]
+        python-version: ["3.12"]
+        union-version: ["0.1.80b0"]
     steps:
-      - name: Check version
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: localhost:30000/union-python-sdk:latest
+          outputs: type=docker,dest=union-python-sdk.tar
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python-version }}
+            UNION_VERSION=${{ matrix.union-version }}
+
+      - name: Upload single binary image
+        uses: actions/upload-artifact@v4
+        with:
+          name: union-python-sdk
+          path: union-python-sdk.tar
+
+  run_image:
+    name: Upload images
+    runs-on: ubuntu-latest
+    needs: [build_images]
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: images
+          pattern: union-python-sdk
+          merge-multiple: true
+
+      - name: Load docker images
         run: |
-          echo ${{matrix.python-version }}
-      # - uses: actions/checkout@v4
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
-  #     - name: Create destination for image tarballs
-  #       run: |
-  #         mkdir -p images
-  #     - name: Build and push
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: .
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
-  #         file: Dockerfile
-  #         platforms: linux/amd64
-  #         tags: union:py${{ matrix.python-version }}-${{ matrix.union-version }}
-  #         outputs: type=docker,dest=images/py${{ matrix.python-version }}-${{ matrix.union-version }}.tar
-  #         build-args: |
-  #           PYTHON_VERSION=${{ matrix.python-version }}
-  #           UNION_VERSION=${{ matrix.union-version }}
+          docker image load -i images/union-python-sdk.tar
 
-  #     - name: Upload single binary image
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: py${{ matrix.python-version }}-${{ matrix.union-version }}
-  #         path: images
+      - uses: unionai/flytectl-setup-action@v0.0.3
+      - name: Setup sandbox
+        run: |
+          mkdir -p ~/.flyte/sandbox
+          cat << EOF > ~/.flyte/sandbox/config.yaml
+          task_resources:
+            defaults:
+              cpu: 500m
+              memory: 500Mi
+            limits:
+              cpu: 2
+              memory: 4Gi
+          EOF
+          flytectl demo start
 
-  # upload_images:
-  #   name: Upload images
-  #   runs-on: ubuntu-latest
-  #   needs: [build_images]
-  #   permissions:
-  #     packages: write
-  #     contents: read
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.8", "3.12"]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         path: images
-  #         pattern: py${{ matrix.python-version }}*
-  #         merge-multiple: true
+      - name: Upload runtime image for testing
+        run: |
+          docker image push localhost:30000/union-python-sdk:latest
 
-  #     - name: Check images
-  #       run: |
-  #         ls images
+      - name: Set up uv
+        run: |
+          curl -LsSf https://astral.sh/uv/0.3.5/install.sh | sh
 
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-  #     - name: Load docker images and push
-  #       run: |
-  #         for image in images/*.tar; do
-  #           docker image load -i "$image"
-  #           TAG=$(basename "$image" .tar)
-  #           docker image tag union:$TAG ghcr.io/${{ github.repository_owner }}/union:$TAG
-  #           docker image push ghcr.io/${{ github.repository_owner }}/union:$TAG
-  #         done
+      - name: Setup python environment
+        run: |
+          uv pip install --system -r tests-requirements.txt
+
+      - name: Setup python environment
+        run: |
+          pytest tests/test_hello_world.py
